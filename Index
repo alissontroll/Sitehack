@@ -1,43 +1,24 @@
-
 cat > index.js <<'EOF'
 const { makeWASocket, useMultiFileAuthState } = require('@badzz88/baileys');
-const pino = require('pino');
 
 async function iniciar() {
   const { state, saveCreds } = await useMultiFileAuthState('./auth');
 
   const sock = makeWASocket({
     auth: state,
-    printQRInTerminal: true,
-    logger: pino({ level: 'silent' })
+    printQRInTerminal: false
   });
 
   sock.ev.on('creds.update', saveCreds);
 
+  if (!state.creds.registered) {
+    const codigo = await sock.requestPairingCode('573159002145');
+    console.log('CODIGO DE PAREAMENTO:', codigo);
+  }
+
   sock.ev.on('connection.update', function(update) {
     if (update.connection === 'open') {
-      console.log('BOT CONECTADO AO WHATSAPP');
-    }
-
-    if (update.connection === 'close') {
-      console.log('CONEXAO FECHADA');
-    }
-  });
-
-  sock.ev.on('messages.upsert', async function(event) {
-    const msg = event.messages[0];
-
-    if (!msg || !msg.message || msg.key.fromMe) return;
-
-    const texto =
-      msg.message.conversation ||
-      msg.message.extendedTextMessage?.text ||
-      '';
-
-    if (texto.toLowerCase() === '!ping') {
-      await sock.sendMessage(msg.key.remoteJid, {
-        text: 'Pong! Bot funcionando.'
-      });
+      console.log('BOT CONECTADO');
     }
   });
 }
